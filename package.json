@@ -1,8 +1,8 @@
 {
-  "name": "web-crawler",
+  "name": "seo-link-analyzer",
   "version": "1.0.0",
-  "description": "terminal-app",
-  "main": "main.js",
+  "description": "SEO link analyzer",
+  "type": "module",
   "scripts": {
     "start": "node main.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
@@ -10,12 +10,7 @@
   "jest": {
     "transform": {}
   },
-  "repository": {
-    "type": "git",
-    "url": "y"
-  },
-  "author": "Ch40s1",
-  "license": "MIT",
+  "author": "wagslane",
   "devDependencies": {
     "jest": "^29.7.0"
   }
