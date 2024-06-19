@@ -1,4 +1,4 @@
-import { JSDOM } from 'jsdom'
+import { JSDOM } from "jsdom";
 
 export function normalizeURL(url) {
   const urlObj = new URL(url);
@@ -11,59 +11,77 @@ export function normalizeURL(url) {
 }
 
 export function getURLsFromHTML(html, baseURL) {
-  const urls = []
-  const dom = new JSDOM(html)
-  const anchors = dom.window.document.querySelectorAll('a')
+  const urls = [];
+  const dom = new JSDOM(html);
+  const anchors = dom.window.document.querySelectorAll("a");
 
   for (const anchor of anchors) {
-    if (anchor.hasAttribute('href')) {
-      let href = anchor.getAttribute('href')
+    if (anchor.hasAttribute("href")) {
+      let href = anchor.getAttribute("href");
 
       try {
         // convert any relative URLs to absolute URLs
-        href = new URL(href, baseURL).href
-        urls.push(href)
+        href = new URL(href, baseURL).href;
+        urls.push(href);
       } catch (err) {
-        console.log(`${err.message}: ${href}`)
+        console.log(`${err.message}: ${href}`);
       }
     }
   }
 
-  return urls
+  return urls;
 }
 
-export async function crawlPage(currentURL) {
-  // fetch and parse the html of the currentURL
-  console.log(`crawling ${currentURL}`)
-
-  let res
+async function fetchHTML(url) {
+  let res;
   try {
-    res = await fetch(currentURL)
+    res = await fetch(url);
   } catch (err) {
-    throw new Error(`Got Network error: ${err.message}`)
+    throw new Error(`Got Network error: ${err.message}`);
   }
 
   if (res.status > 399) {
-    console.log(`Got HTTP error: ${res.status} ${res.statusText}`)
-    return
+    console.log(`Got HTTP error: ${res.status} ${res.statusText}`);
+    return;
   }
 
-  const contentType = res.headers.get('content-type')
-  if (!contentType || !contentType.includes('text/html')) {
-    console.log(`Got non-HTML response: ${contentType}`)
-    return
+  const contentType = res.headers.get("content-type");
+  if (!contentType || !contentType.includes("text/html")) {
+    console.log(`Got non-HTML response: ${contentType}`);
+    return;
   }
+  return res.text();
+}
 
-  console.log(await res.text())
-
-  /* Make sure the currentURL is on the same domain as the baseURL. If it's not, just return the current pages. We don't want to crawl the entire internet, just the domain in question.
-  Get a normalized version of the currentURL.
-  If the pages object already has an entry for the normalized version of the current URL, just increment the count and return the current pages.
-  Otherwise, add an entry to the pages object for the normalized version of the current URL, and set the count to 1.
-  If we've gotten here, break out the logic for fetching the current URL and parsing the HTML into its own function. This will keep the crawl functionality readable and manageable. Call the new function inside crawlPage.
-  Assuming all went well with the fetch request in the new function, get all the URLs from the response body HTML.
-  Recursively crawl each URL you found on the page and update the pages to keep an aggregate count.
-  Finally, return the updated pages object.
-  */
-
+export async function crawlPage(baseURL, currentURL = baseURL, pages = {}) {
+  // create 2 url objects to check hostname
+  const currentURLObj = new URL(currentURL);
+  const baseURLObj = new URL(baseURL);
+  if (currentURLObj.hostname != baseURLObj.hostname) {
+    return pages;
+  }
+  // use a consistent URL format
+  const normalizedURL = normalizeURL(currentURL);
+  // increment counts
+  // check if we visited it before
+  if (pages[normalizedURL] > 0) {
+    pages[normalizedURL]++;
+    return pages;
+  }
+  // if the top was false then create a new entry
+  pages[normalizedURL] = 1;
+  // get html of current url
+  // console.log(`crawling ${currentURL}`);
+  let html = "";
+  try {
+    html = await fetchHTML(currentURL);
+  } catch (err) {
+    console.log(err.message);
+    return pages;
+  }
+  const nextURLs = getURLsFromHTML(html, baseURL);
+  for (const nextURL of nextURLs) {
+    pages = await crawlPage(baseURL, nextURL, pages);
+  }
+  return pages;
 }
